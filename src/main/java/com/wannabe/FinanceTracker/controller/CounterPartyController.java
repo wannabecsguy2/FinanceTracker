@@ -1,6 +1,7 @@
 package com.wannabe.FinanceTracker.controller;
 
 import com.wannabe.FinanceTracker.model.CounterParty;
+import com.wannabe.FinanceTracker.model.ErrorCode;
 import com.wannabe.FinanceTracker.payload.GenericResponseObject;
 import com.wannabe.FinanceTracker.security.UserPrincipal;
 import com.wannabe.FinanceTracker.service.CounterPartyService;
@@ -25,7 +26,7 @@ public class CounterPartyController {
             return ResponseEntity.ok().body(counterPartyService.addCounterParty());
         } catch (Exception e) {
             log.error("Exception occurred while adding CounterParty", e);
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Failed to add counter party"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Failed to add counter party", ErrorCode.SERVICE_FAILED));
         }
     }
 
@@ -36,7 +37,7 @@ public class CounterPartyController {
             return ResponseEntity.ok().body(counterPartyService.fetchAllTypes());
         } catch (Exception e) {
             log.error("Exception occurred while fetching all counter party types", e);
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Internal Server Error, please try again later"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Internal Server Error, please try again later", ErrorCode.SERVICE_FAILED));
         }
     }
 

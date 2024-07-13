@@ -2,6 +2,7 @@ package com.wannabe.FinanceTracker.controller;
 
 import com.wannabe.FinanceTracker.exception.OTPGenerationException;
 import com.wannabe.FinanceTracker.exception.ResourceNotFoundException;
+import com.wannabe.FinanceTracker.model.ErrorCode;
 import com.wannabe.FinanceTracker.payload.AssignRoleRequest;
 import com.wannabe.FinanceTracker.payload.GenericResponseObject;
 import com.wannabe.FinanceTracker.payload.OTPVerificationRequest;
@@ -28,10 +29,23 @@ public class UserController {
         try {
             return ResponseEntity.ok().body(userService.updateRole(assignRoleRequest));
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage()));
+            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
         } catch (Exception e) {
             log.error("Exception occurred while trying to assign role", e);
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Role assignment failed"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Role assignment failed", ErrorCode.SERVICE_FAILED));
+        }
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    @GetMapping("/is-email-verified")
+    public ResponseEntity<GenericResponseObject<?>> isEmailVerified(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        try {
+            return ResponseEntity.ok().body(userService.isEmailVerified(userPrincipal));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
+        } catch (Exception e) {
+            log.error("Exception occurred while checking email verification", e);
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Email verification check failed", ErrorCode.SERVICE_FAILED));
         }
     }
 
@@ -41,10 +55,10 @@ public class UserController {
         try {
             return ResponseEntity.ok().body(userService.sendVerificationEmail(userPrincipal));
         } catch (OTPGenerationException e) {
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "OTP could not be generated"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "OTP could not be generated", e.getErrorCode()));
         } catch (Exception e) {
             log.error("Exception occurred while trying to send verification email", e);
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Email verification failed"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Email verification failed", ErrorCode.SERVICE_FAILED));
         }
     }
 
@@ -54,10 +68,10 @@ public class UserController {
         try {
             return ResponseEntity.ok().body(userService.verifyOtp(userPrincipal, otpVerificationRequest));
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage()));
+            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
         } catch (Exception e) {
             log.error("Exception occurred while trying to verify otp", e);
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "OTP verification failed"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "OTP verification failed", ErrorCode.SERVICE_FAILED));
         }
     }
 
@@ -67,10 +81,10 @@ public class UserController {
         try {
             return ResponseEntity.ok().body(userService.updateProfile(userPrincipal, updateProfileRequest));
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage()));
+            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
         } catch (Exception e) {
             log.error("Exception occurred while trying to update profile", e);
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Failed to update profile"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Failed to update profile", ErrorCode.SERVICE_FAILED));
         }
     }
 
@@ -80,10 +94,10 @@ public class UserController {
         try {
             return ResponseEntity.ok().body(userService.updateEmail(userPrincipal, newEmail));
         } catch (ResourceNotFoundException e) {
-            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage()));
+            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
         } catch (Exception e) {
             log.error("Exception occurred while trying to update Email", e);
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Failed to update email"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Failed to update email", ErrorCode.SERVICE_FAILED));
         }
     }
 

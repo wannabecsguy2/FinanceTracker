@@ -1,6 +1,7 @@
 package com.wannabe.FinanceTracker.controller;
 
 import com.wannabe.FinanceTracker.model.Currency;
+import com.wannabe.FinanceTracker.model.ErrorCode;
 import com.wannabe.FinanceTracker.payload.GenericResponseObject;
 import com.wannabe.FinanceTracker.service.CurrencyService;
 import lombok.extern.slf4j.Slf4j;
@@ -23,7 +24,7 @@ public class CurrencyController {
             return ResponseEntity.ok().body(currencyService.addCurrency(newCurrency));
         } catch (Exception e) {
             log.error("Exception occurred while adding new currency", e);
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Could not add currency"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Could not add currency", ErrorCode.SERVICE_FAILED));
         }
     }
 
@@ -33,7 +34,7 @@ public class CurrencyController {
             return ResponseEntity.ok().body(currencyService.fetchAllCurrency());
         } catch (Exception e) {
             log.error("Exception occurred while returning currencies", e);
-            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Error while fetching currencies"));
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Error while fetching currencies", ErrorCode.SERVICE_FAILED));
         }
     }
 }

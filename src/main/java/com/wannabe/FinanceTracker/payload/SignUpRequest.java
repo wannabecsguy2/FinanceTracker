@@ -8,6 +8,8 @@ import java.util.Date;
 @Data
 public class SignUpRequest {
     @JsonProperty(required=true)
+    private String phone; // Format: {Extension}-{Number}
+    @JsonProperty(required=true)
     private String email;
     @JsonProperty(required=true)
     private String password;

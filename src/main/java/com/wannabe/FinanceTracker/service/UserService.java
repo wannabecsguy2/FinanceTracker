@@ -61,7 +61,16 @@ public class UserService {
             return new GenericResponseObject<>(true, "Role assigned successfully");
         } catch (Exception e) {
             log.error("Exception occurred while trying to assign role", e);
-            return new GenericResponseObject<>(false, "Unable to assign role");
+            return new GenericResponseObject<>(false, "Unable to assign role", ErrorCode.SERVICE_FAILED);
+        }
+    }
+
+    public GenericResponseObject<?> isEmailVerified(UserPrincipal userPrincipal) throws Exception {
+        User user = userRepository.findById(userPrincipal.getId()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.isEmailVerified()) {
+            return new GenericResponseObject<>(true, "Email verified");
+        } else {
+            return new GenericResponseObject<>(false, "Email not verified", ErrorCode.NOT_VERIFIED);
         }
     }
 
@@ -113,7 +122,7 @@ public class UserService {
 
         if (otp == null || otp.isEmpty()) {
             log.error("OTP is null or empty");
-            throw new ParameterValidationFailedException("OTP is required");
+            throw new ParameterValidationFailedException("OTP is required", ErrorCode.EMPTY_FIELD);
         }
 
         List<OTP> userOtpList = otpRepository.findByUserIdAndOtpAndVerifiedAndType(userPrincipal.getId(), otp, false, type).orElseThrow(() -> new ResourceNotFoundException("OTP", "otp", otp));
@@ -131,7 +140,7 @@ public class UserService {
             }
         }
 
-        return new GenericResponseObject<>(false, "OTP is invalid");
+        return new GenericResponseObject<>(false, "OTP is invalid", ErrorCode.FIELD_NOT_VALID);
     }
 
     public GenericResponseObject<?> updateProfile(UserPrincipal userPrincipal, UpdateProfileRequest updateProfileRequest) throws Exception {
@@ -148,12 +157,12 @@ public class UserService {
     public GenericResponseObject<?> updateEmail(UserPrincipal userPrincipal, String newEmail) throws Exception {
         boolean emailExists = userRepository.existsByEmail(newEmail);
         if (emailExists) {
-            return new GenericResponseObject<>(false, "Email already registered, please login");
+            return new GenericResponseObject<>(false, "Email already registered, please login", ErrorCode.ALREADY_EXISTS);
         }
 
         User user = userRepository.findById(userPrincipal.getId()).orElseThrow(() -> new ResourceNotFoundException("User", "id", userPrincipal.getId()));
         if (user.getEmail().equals(newEmail)) {
-            return new GenericResponseObject<>(false, "Cannot change to existing email");
+            return new GenericResponseObject<>(false, "Cannot change to existing email", ErrorCode.FIELD_NOT_VALID);
         }
 
         user.setEmail(newEmail);

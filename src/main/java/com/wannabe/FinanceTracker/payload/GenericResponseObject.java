@@ -8,7 +8,6 @@ public class GenericResponseObject<T> {
     private Boolean success;
     private String message;
     private ErrorCode errorCode;
-    private boolean unhandledException;
     private T data;
 
     public GenericResponseObject(Boolean success, String message, ErrorCode errorCode) {

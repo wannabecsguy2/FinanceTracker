@@ -1,5 +1,7 @@
 package com.wannabe.FinanceTracker.model;
 
 public enum OTPType {
-    EMAIL_VERIFICATION
+    EMAIL_VERIFICATION,
+    PHONE_VERIFICATION,
+    LOGIN
 }

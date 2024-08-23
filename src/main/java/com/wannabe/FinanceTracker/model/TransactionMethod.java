@@ -5,10 +5,10 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name="transaction_type")
-public class TransactionType {
+@Table(name="transaction_method")
+public class TransactionMethod {
     @Id
-    @GeneratedValue(strategy=GenerationType.AUTO)
+    @GeneratedValue(strategy= GenerationType.AUTO)
     @Column(name="id", updatable=false, nullable=false)
     private Long id;
 

@@ -2,6 +2,7 @@ package com.wannabe.FinanceTracker.utils;
 
 import com.wannabe.FinanceTracker.exception.OTPGenerationException;
 import com.wannabe.FinanceTracker.model.OTP;
+import com.wannabe.FinanceTracker.model.User;
 import com.wannabe.FinanceTracker.security.UserPrincipal;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Random;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -22,11 +24,11 @@ public class OTPUtils {
     @Value("${app.otp.validitySec}")
     private Long otpValiditySeconds;
 
-    public OTP generateOTP(UserPrincipal userPrincipal) throws OTPGenerationException {
+    public OTP generateOTP(UUID userId) throws OTPGenerationException {
         try {
             OTP otp = new OTP();
 
-            otp.setUserId(userPrincipal.getId());
+            otp.setUserId(userId);
             otp.setOtp(getOtpString(otpLength));
             otp.setExpires(LocalDateTime.now().plusSeconds(otpValiditySeconds));
 

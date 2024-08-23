@@ -21,4 +21,6 @@ public class SignUpRequest {
     private String username;
     @JsonProperty(required=true)
     private Date birthDate;
+    @JsonProperty(required = true)
+    private Long defaultCountryId;
 }

@@ -1,5 +1,6 @@
 package com.wannabe.FinanceTracker.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -27,7 +28,4 @@ public class UserProfile {
     @Column(name="birth_date")
     @Temporal(value= TemporalType.DATE)
     private Date birthDate;
-
-    @OneToOne(mappedBy="userProfile")
-    private User user;
 }

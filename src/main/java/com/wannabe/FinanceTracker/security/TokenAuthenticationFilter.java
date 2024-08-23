@@ -20,6 +20,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -33,6 +35,8 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
+
+    private static final List<String> doNotFilterRoutes = new ArrayList<>(List.of("/auth", "/country/fetch-all", "/currency/fetch-all"));
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -62,7 +66,12 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return request.getRequestURI().startsWith(baseUrl.concat("/auth"));
+        for (String route: doNotFilterRoutes) {
+            if (request.getRequestURI().startsWith(baseUrl.concat(route))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String getJwtFromRequest (HttpServletRequest request){

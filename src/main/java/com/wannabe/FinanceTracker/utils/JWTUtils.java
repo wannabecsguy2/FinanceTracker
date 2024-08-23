@@ -12,6 +12,8 @@ import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -34,9 +36,10 @@ public class JWTUtils {
         Date expiryDate = new Date(now.getTime() + jwtValidityMsec);
 
         return Jwts.builder()
-                .setSubject(String.valueOf(userPrincipal.getId()))
-                .setIssuedAt(new Date())
-                .setExpiration(expiryDate)
+                .subject(String.valueOf(userPrincipal.getId()))
+                .issuedAt(new Date())
+                .expiration(expiryDate)
+                .claims(createJWTSubject(userPrincipal))
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
                 .compact();
     }
@@ -65,10 +68,20 @@ public class JWTUtils {
         } catch (UnsupportedJwtException ex) {
             log.error("Unsupported JWT token");
         } catch (IllegalArgumentException ex) {
-            log.error("JWT claims string is empty.");
+            log.error("JWT claims string is empty");
         } catch (SignatureException ex) {
             log.error("Invalid JWT signature");
         }
         return false;
+    }
+
+    public Map<String, Object> createJWTSubject(UserPrincipal userPrincipal) {
+        Map<String, Object> claims = new HashMap<>();
+
+        claims.put("id", userPrincipal.getId());
+        claims.put("email", userPrincipal.getEmail());
+        claims.put("username", userPrincipal.getUsername());
+
+        return claims;
     }
 }

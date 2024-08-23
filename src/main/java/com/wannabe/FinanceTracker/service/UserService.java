@@ -26,6 +26,9 @@ public class UserService {
     private EmailService emailService;
 
     @Autowired
+    private SMSService smsService;
+
+    @Autowired
     private OTPUtils otpUtils;
 
     @Autowired
@@ -74,12 +77,21 @@ public class UserService {
         }
     }
 
+    public GenericResponseObject<?> isPhoneVerified(UserPrincipal userPrincipal) throws Exception {
+        User user = userRepository.findById(userPrincipal.getId()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.isPhoneVerified()) {
+            return new GenericResponseObject<>(true, "Phone verified");
+        } else {
+            return new GenericResponseObject<>(false, "Phone not verified", ErrorCode.NOT_VERIFIED);
+        }
+    }
+
     public GenericResponseObject<?> sendVerificationEmail(UserPrincipal userPrincipal) throws Exception {
         Email verificationEmail = new Email();
         verificationEmail.setUserId(userPrincipal.getId());
-        verificationEmail.setType(EmailType.OTP);
+        verificationEmail.setType(EmailType.VERIFICATION_OTP);
 
-        OTP otp = otpUtils.generateOTP(userPrincipal);
+        OTP otp = otpUtils.generateOTP(userPrincipal.getId());
         otp.setType(OTPType.EMAIL_VERIFICATION);
         try {
             emailService.sendVerificationEmail(userPrincipal, otp, verificationEmail);
@@ -112,6 +124,10 @@ public class UserService {
 
             throw new Exception("Failed to send email to user");
         }
+    }
+
+    public GenericResponseObject<?> sendVerificationSms(UserPrincipal userPrincipal) throws Exception {
+        return new GenericResponseObject<>(false, "Method not implemented", ErrorCode.METHOD_NOT_IMPLEMENTED);
     }
 
     public GenericResponseObject<?> verifyOtp(UserPrincipal userPrincipal, OTPVerificationRequest otpVerificationRequest) throws Exception {
@@ -168,7 +184,7 @@ public class UserService {
         user.setEmail(newEmail);
         user.setEmailVerified(false);
 
-        return new GenericResponseObject<>(true, "Email updated successfully");
+        return new GenericResponseObject<>(true, "Email updated successfully, please verify before continuing");
     }
 
     public void handleVerifiedOtp(OTP otp) throws Exception {

@@ -1,5 +1,6 @@
 package com.wannabe.FinanceTracker.model;
 
+import com.wannabe.FinanceTracker.payload.AddTransactionRequest;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -31,16 +32,25 @@ public class Transaction {
     private TransactionDirection direction;
 
     @OneToOne(fetch=FetchType.EAGER, optional=false)
-    @JoinColumn(name="type_id", referencedColumnName="id", nullable=false)
-    private TransactionType type;
+    @JoinColumn(name="tag_id", referencedColumnName="id", nullable=false)
+    private TransactionTag tag;
 
+    @OneToOne(fetch=FetchType.EAGER, optional=false)
+    @JoinColumn(name="method_id", referencedColumnName="id", nullable=false)
+    private TransactionMethod method;
+
+    @Column(name="amount", nullable = false)
     private BigDecimal amount;
 
     @OneToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "currency_id", referencedColumnName = "id", nullable = false)
     private Currency currency;
 
+    private String note;
+
     private LocalDateTime created = LocalDateTime.now();
 
     private LocalDateTime updated;
+
+    // TODO: Add receipts in Transaction
 }

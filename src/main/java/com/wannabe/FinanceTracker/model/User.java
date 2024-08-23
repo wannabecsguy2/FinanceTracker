@@ -30,8 +30,8 @@ public class User {
     @Column(name="phone", nullable=false, unique=true)
     private String phone;
 
-    @Column(name="password", nullable = false)
     @JsonIgnore
+    @Column(name="password")
     private String password;
 
     @Column(name="active", nullable=false)
@@ -40,7 +40,10 @@ public class User {
     @Column(name="email_verified", nullable=false)
     private boolean emailVerified = false;
 
-    @OneToOne(fetch=FetchType.LAZY, optional=false, cascade=CascadeType.ALL)
+    @Column(name="phone_verified", nullable=false)
+    private boolean phoneVerified = false;
+
+    @OneToOne(fetch=FetchType.EAGER, optional=false, cascade=CascadeType.ALL)
     @JoinColumn(name="user_profile_id", referencedColumnName="id", nullable=false, updatable=false)
     private UserProfile userProfile;
 
@@ -55,6 +58,6 @@ public class User {
     private List<Role> roles = new ArrayList<>();
 
     @OneToOne(fetch=FetchType.EAGER, optional = false)
-    @JoinColumn(name="currency_id", referencedColumnName = "id", nullable = false)
-    private Currency defaultCurrency;
+    @JoinColumn(name="country_id", referencedColumnName="id", nullable = false)
+    private Country defaultCountry;
 }

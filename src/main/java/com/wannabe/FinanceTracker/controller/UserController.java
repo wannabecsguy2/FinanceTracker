@@ -50,6 +50,18 @@ public class UserController {
     }
 
     @PreAuthorize("hasRole('USER')")
+    @GetMapping("/is-phone-verified")
+    public ResponseEntity<GenericResponseObject<?>> isPhoneVerified(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        try {
+            return ResponseEntity.ok().body(userService.isPhoneVerified(userPrincipal));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Phone verification check failed", ErrorCode.SERVICE_FAILED));
+        }
+    }
+
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/send-verification-email")
     public ResponseEntity<GenericResponseObject<?>> sendVerificationEmail(@AuthenticationPrincipal UserPrincipal userPrincipal) {
         try {

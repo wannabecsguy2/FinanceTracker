@@ -19,12 +19,15 @@ public class CounterParty {
     private UUID id;
 
     @JdbcTypeCode(SqlTypes.CHAR)
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id", nullable = false, updatable=false)
     private UUID userId;
 
+    @Column(name="name", nullable=false)
     private String name;
 
     private String email;
+
+    private String phone;
 
     @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "associated_user_id")

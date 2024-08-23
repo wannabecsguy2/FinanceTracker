@@ -8,11 +8,10 @@ import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-
 @Entity
 @Data
-@Table(name="email")
-public class Email {
+@Table(name="sms")
+public class SMS {
     @Id
     @GeneratedValue(strategy= GenerationType.UUID)
     @JdbcTypeCode(SqlTypes.CHAR)
@@ -25,13 +24,16 @@ public class Email {
 
     @Enumerated(EnumType.STRING)
     @Column(name="status", nullable=false, updatable=false)
-    private EmailStatus status;
+    private SMSStatus status;
 
     @Enumerated(EnumType.STRING)
     @Column(name="type", nullable=false, updatable=false)
-    private EmailType type;
+    private SMSType type;
 
     private LocalDateTime created = LocalDateTime.now();
 
     private LocalDateTime updated;
+
+    @Column(name="sid", nullable=false, updatable=false)
+    private String sid;
 }

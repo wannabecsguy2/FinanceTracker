@@ -1,0 +1,5 @@
+package com.wannabe.FinanceTracker.model;
+
+public enum SMSStatus {
+    QUEUED, FAILED, SENT, SENDING, DELIVERED, UNDELIVERED, RECEIVING, RECEIVED, ACCEPTED, SCHEDULED, READ, CANCELLED, UNHANDLED
+}

@@ -20,8 +20,8 @@ public class EmailService {
     public void sendVerificationEmail(UserPrincipal userPrincipal, OTP otp, Email email) throws Exception {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(userPrincipal.getEmail());
-        message.setSubject("OTP for Account Verification");
-        message.setText("Your OTP for account verification is: " + otp.getOtp());
+        message.setSubject("OTP for Email Verification");
+        message.setText("Your OTP for Email verification is: " + otp.getOtp());
 
         javaMailSender.send(message);
     }

@@ -90,4 +90,8 @@ public class UserPrincipal implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
     }
+
+    public Collection<Role> getRoles() {
+        return (Collection<Role>) authorities;
+    }
 }

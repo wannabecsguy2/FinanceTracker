@@ -141,7 +141,7 @@ public class UserService {
             throw new ParameterValidationFailedException("OTP is required", ErrorCode.EMPTY_FIELD);
         }
 
-        List<OTP> userOtpList = otpRepository.findByUserIdAndOtpAndVerifiedAndType(userPrincipal.getId(), otp, false, type).orElseThrow(() -> new ResourceNotFoundException("OTP", "otp", otp));
+        List<OTP> userOtpList = otpRepository.findAllByUserIdAndOtpAndVerifiedAndTypeAndExpiresAfter(userPrincipal.getId(), otp, false, type, LocalDateTime.now()).orElseThrow(() -> new ResourceNotFoundException("OTP", "otp", otp));
 
         for (OTP userOtp: userOtpList) {
             if (userOtp.getOtp().equals(otp) && LocalDateTime.now().isBefore(userOtp.getExpires())) {

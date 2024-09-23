@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.buf.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,7 @@ public class TwilioWebhook {
     // @Value("${twilio.account.authToken}")
     private String twilioAccountAuthToken = "sdbjahbsdbaksndkanksdn";
 
+    @Autowired
     private SMSRepository smsRepository;
 
     private final RequestValidator requestValidator = new RequestValidator(twilioAccountAuthToken);
@@ -32,7 +34,9 @@ public class TwilioWebhook {
     public void statusCallbackWebhook(HttpServletRequest request, HttpServletResponse response) throws IOException {
         String messageSID = request.getParameter("MessageSid");
         String messageStatus = request.getParameter("MessageStatus");
+
         SMSStatus smsStatus;
+
         try {
             smsStatus = SMSStatus.valueOf(messageStatus.toUpperCase());
         } catch (Exception e) {

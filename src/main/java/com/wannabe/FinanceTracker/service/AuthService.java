@@ -3,21 +3,21 @@ package com.wannabe.FinanceTracker.service;
 import com.wannabe.FinanceTracker.exception.ParameterValidationFailedException;
 import com.wannabe.FinanceTracker.exception.ResourceNotFoundException;
 import com.wannabe.FinanceTracker.model.*;
-import com.wannabe.FinanceTracker.payload.GenericResponseObject;
-import com.wannabe.FinanceTracker.payload.LoginPhoneOTPRequest;
-import com.wannabe.FinanceTracker.payload.LoginPasswordRequest;
-import com.wannabe.FinanceTracker.payload.SignUpRequest;
+import com.wannabe.FinanceTracker.payload.*;
 import com.wannabe.FinanceTracker.repository.*;
 
+import com.wannabe.FinanceTracker.security.authentication.OTPAuthenticationProvider;
+import com.wannabe.FinanceTracker.security.authentication.PasswordAuthenticationProvider;
 import com.wannabe.FinanceTracker.utils.CommonFunctionsUtils;
 import com.wannabe.FinanceTracker.utils.JWTUtils;
 import com.wannabe.FinanceTracker.utils.OTPUtils;
 import jakarta.transaction.Transactional;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,7 +32,10 @@ public class AuthService {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private AuthenticationManager authenticationManager;
+    private PasswordAuthenticationProvider passwordAuthenticationProvider;
+
+    @Autowired
+    private OTPAuthenticationProvider otpAuthenticationProvider;
 
     @Autowired
     private SMSService smsService;
@@ -50,76 +53,117 @@ public class AuthService {
     private UserRepository userRepository;
 
     @Autowired
-    private UserProfileRepository userProfileRepository;
-
-    @Autowired
     private RoleRepository roleRepository;
 
     @Autowired
     private CountryRepository countryRepository;
 
     @Autowired
-    private CurrencyRepository currencyRepository;
+    private SMSRepository smsRepository;
+
+    @Autowired
+    private OTPRepository otpRepository;
 
     @Transactional
-    public GenericResponseObject<?> signUp(SignUpRequest signUpRequest) throws Exception {
+    public GenericResponseObject<?> register(RegisterRequest registerRequest) throws Exception {
         try {
-            validateSignUpRequest(signUpRequest);
+            validateSignUpRequest(registerRequest);
         } catch (ParameterValidationFailedException e) {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException("Unable to register user");
         }
 
-        User user = new User();
-        UserProfile userProfile = new UserProfile();
-        List<Role> userRoles = new ArrayList<>();
+        switch (registerRequest.getRegistrationStep()) {
+            case PHONE_REGISTERED: {
+                try {
+                    User user;
+                    if (userRepository.existsByPhone(registerRequest.getPhone())) {
+                        user = userRepository.findByEmailOrUsernameOrPhone(registerRequest.getPhone(), registerRequest.getPhone(), registerRequest.getPhone()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                    } else {
+                        // Create new user
+                        user = new User();
+                        List<Role> userRoles = new ArrayList<>();
 
-        Role userRole = roleRepository.findTopByOrderByLevelDesc().orElse(null);
-        if (userRole == null) {
-            throw new ResourceNotFoundException("Lowest Default role not found");
-        }
-        userRoles.add(userRole);
+                        Role userRole = roleRepository.findTopByOrderByLevelDesc().orElse(null);
+                        if (userRole == null) {
+                            throw new ResourceNotFoundException("Lowest Default Role not found");
+                        }
+                        userRoles.add(userRole);
 
-        user.setEmail(signUpRequest.getEmail());
-        user.setUsername(signUpRequest.getUsername());
-        user.setPhone(signUpRequest.getPhone());
-        user.setPassword(passwordEncoder.encode(signUpRequest.getPassword()));
-        user.setRoles(userRoles);
+                        user.setPhone(registerRequest.getPhone());
 
-        Country defaultCountry = countryRepository.findById(signUpRequest.getDefaultCountryId()).orElseThrow(() -> new ResourceNotFoundException("Country not found"));
-        user.setDefaultCountry(defaultCountry);
+                        Country defaultCountry = countryRepository.findById(registerRequest.getDefaultCountryId()).orElseThrow(() -> new ResourceNotFoundException("Country not found"));
 
-        commonFunctionsUtils.mapUserProfile(userProfile, signUpRequest);
+                        user.setDefaultCountry(defaultCountry);
+                        user.setRoles(userRoles);
+                        user.setRegistrationStep(RegistrationStep.PHONE_REGISTERED);
 
-        try {
-            userProfile = userProfileRepository.save(userProfile);
-        } catch (Exception e) {
-            log.error("Exception occurred while trying to save user profile", e);
-            throw new RuntimeException("Unable to register user");
-        }
 
-        user.setUserProfile(userProfile);
-        try {
-            user = userRepository.save(user);
-            return new GenericResponseObject<>(true, "User registered successfully");
-        } catch (Exception e) {
-            log.error("Exception occurred while trying to register new user", e);
-            throw new RuntimeException("Unable to register user");
+                        user = userRepository.save(user);
+                    }
+                    SMS sms = new SMS();
+                    sms.setUserId(user.getId());
+                    sms.setType(SMSType.OTP);
+
+                    OTP otp = otpUtils.generateOTP(user.getId());
+                    otp.setType(OTPType.PHONE_VERIFICATION);
+
+                    smsService.sendVerificationSms(user, otp, sms);
+
+                    otpRepository.save(otp);
+                    smsRepository.save(sms);
+
+                    return new GenericResponseObject<>(true, "OTP Sent, Proceed to verify Phone");
+                } catch (Exception e) {
+                    log.error("Exception occurred while trying to register new user", e);
+                    throw new RuntimeException("Unable to register user");
+                }
+            }
+
+            case PHONE_VERIFIED: {
+                User user = userRepository.findByPhone(registerRequest.getPhone()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                try {
+                    if (commonFunctionsUtils.verifyOtp(registerRequest.getOtp(), user.getId(), OTPType.PHONE_VERIFICATION)) {
+                        user.setRegistrationStep(RegistrationStep.PHONE_VERIFIED);
+                        userRepository.save(user);
+
+                        return new GenericResponseObject<>(true, "Phone verified successfully, proceed to enter user details");
+                    } else {
+                        return new GenericResponseObject<>(false, "Invalid OTP", ErrorCode.RESOURCE_NOT_FOUND);
+                    }
+                } catch (Exception e) {
+                    log.error("Exception occurred while trying to verify phone", e);
+                    throw new RuntimeException("Unable to verify phone");
+                }
+            }
+
+            case USER_DETAILS_RECEIVED: {
+                User user = userRepository.findByPhone(registerRequest.getPhone()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+
+                user.setUsername(registerRequest.getUsername());
+                user.setPassword(passwordEncoder.encode(registerRequest.getPassword()));
+                user.setPhoneVerified(true);
+                user.setRegistrationStep(RegistrationStep.USER_VERIFIED);
+
+                user = userRepository.save(user);
+
+                Authentication authentication = passwordAuthenticationProvider.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), registerRequest.getPassword(), user.getRoles()));
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+                String jwt = jwtUtils.createJWT(authentication);
+
+                return new GenericResponseObject<>(true, "User registered and logged in successfully", jwt);
+            }
+
+            default:
+                throw new Exception("Invalid registration step");
         }
     }
 
     public GenericResponseObject<?> loginPassword(LoginPasswordRequest loginPasswordRequest) throws Exception {
-        log.info("Received login password request for user with email/username/phone: " + loginPasswordRequest.getEmail() + "/" + loginPasswordRequest.getUsername() + "/" + loginPasswordRequest.getPhone());
-        // TODO: User Identifier Code is not working
-        String userIdentifier = null;
-        if (loginPasswordRequest.getUsername() != null && !loginPasswordRequest.getUsername().isEmpty()) {
-            userIdentifier = loginPasswordRequest.getUsername();
-        } else if (loginPasswordRequest.getEmail() != null && !loginPasswordRequest.getEmail().isEmpty()) {
-            userIdentifier = loginPasswordRequest.getEmail();
-        } else if (loginPasswordRequest.getPhone() != null && !loginPasswordRequest.getPhone().isEmpty()) {
-            userIdentifier = loginPasswordRequest.getPhone();
-        }
+        log.info("Received login password request for user with email/username/phone: {}/{}/{}", loginPasswordRequest.getEmail(), loginPasswordRequest.getUsername(), loginPasswordRequest.getPhone());
+        String userIdentifier = getUserIdentifier(loginPasswordRequest);
 
         if(userIdentifier == null || userIdentifier.isEmpty()) {
             log.error("User identifier is null or empty");
@@ -128,18 +172,20 @@ public class AuthService {
 
         User user = userRepository.findByEmailOrUsernameOrPhone(userIdentifier, userIdentifier, userIdentifier).orElseThrow(() -> new ResourceNotFoundException("User not found with specified identifier"));
 
-        Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), loginPasswordRequest.getPassword(), user.getRoles()));
+        Authentication authentication = passwordAuthenticationProvider.authenticate(new UsernamePasswordAuthenticationToken(user.getUsername(), loginPasswordRequest.getPassword(), user.getRoles()));
         SecurityContextHolder.getContext().setAuthentication(authentication);
 
         String jwt = jwtUtils.createJWT(authentication);
 
-        return new GenericResponseObject<>(true, jwt, user);
+        return new GenericResponseObject<>(true, "Login successful", jwt);
     }
 
+    @Transactional
     public GenericResponseObject<?> loginPhoneOtp(LoginPhoneOTPRequest loginPhoneOTPRequest) throws Exception {
         switch (loginPhoneOTPRequest.getType()) {
             case SEND: {
-                if(!userRepository.existsByPhone(loginPhoneOTPRequest.getPhone())) {
+                log.info("Send Login OTP request received for phone: {}", loginPhoneOTPRequest.getPhone());
+                if(!userRepository.existsByPhoneAndPhoneVerified(loginPhoneOTPRequest.getPhone(), true)) {
                     return new GenericResponseObject<>(false, "User not found");
                 }
 
@@ -148,75 +194,97 @@ public class AuthService {
                     return new GenericResponseObject<>(false, "Login using password to verify phone first", ErrorCode.NOT_VERIFIED);
                 }
 
-                SMS sms = new SMS();
-                sms.setUserId(user.getId());
-                sms.setType(SMSType.OTP);
-
-                OTP otp = otpUtils.generateOTP(user.getId());
-                otp.setType(OTPType.LOGIN);
                 try {
-                    smsService.sendLoginSms(user, otp, sms);
+                    SMS sms = new SMS();
+                    sms.setUserId(user.getId());
+                    sms.setType(SMSType.OTP);
+
+                    OTP otp = otpUtils.generateOTP(user.getId());
+                    otp.setType(OTPType.LOGIN);
+
+                    smsService.sendVerificationSms(user, otp, sms);
+
+                    otpRepository.save(otp);
+                    smsRepository.save(sms);
+
+                    return new GenericResponseObject<>(true, "OTP sent, proceed to login with OTP");
                 } catch (Exception e) {
-                    return new GenericResponseObject<>(false, "SMS could not be sent");
+                    log.error("Exception occurred while trying to register new user", e);
+                    throw new RuntimeException("Unable to send OTP at this time");
                 }
             }
 
             case VERIFY: {
+                log.info("Verify Login OTP request received for phone: {}", loginPhoneOTPRequest.getPhone());
+                User user = userRepository.findByPhone(loginPhoneOTPRequest.getPhone()).orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                try {
+                    Authentication authentication = otpAuthenticationProvider.authenticate(new UsernamePasswordAuthenticationToken(user.getPhone(), loginPhoneOTPRequest.getOtp(), user.getRoles()));
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
+                    String jwt = jwtUtils.createJWT(authentication);
+
+                    return new GenericResponseObject<>(true, "User logged in successfully", jwt);
+                } catch (AuthenticationException e) {
+                    throw new BadCredentialsException("Invalid OTP");
+                } catch (Exception e) {
+                    log.error("Exception occurred while trying to verify phone", e);
+                    throw new RuntimeException("Unable to verify phone");
+                }
             }
 
-            default: {
-
-            }
+            default:
+                throw new Exception("Invalid registration step");
         }
-        // TODO: Put token in message and try to configure both email and Phone in one
-        return new GenericResponseObject<>(false, "Service has not been implemented", ErrorCode.METHOD_NOT_IMPLEMENTED);
     }
 
-    public GenericResponseObject<?> isUsernameTaken(String username) {
+    public GenericResponseObject<?> isUsernameTaken(String username) throws Exception {
         return new GenericResponseObject<>(true, "Username validation done", userRepository.existsByUsername(username));
     }
 
-    public GenericResponseObject<?> fetchAllCountries() {
-        return new GenericResponseObject<>(true, "Countries fetch", countryRepository.findAll());
+    private static String getUserIdentifier(LoginPasswordRequest loginPasswordRequest) {
+        String userIdentifier = null;
+        if (loginPasswordRequest.getUsername() != null && !loginPasswordRequest.getUsername().isEmpty()) {
+            userIdentifier = loginPasswordRequest.getUsername();
+        } else if (loginPasswordRequest.getEmail() != null && !loginPasswordRequest.getEmail().isEmpty()) {
+            userIdentifier = loginPasswordRequest.getEmail();
+        } else if (loginPasswordRequest.getPhone() != null && !loginPasswordRequest.getPhone().isEmpty()) {
+            userIdentifier = loginPasswordRequest.getPhone();
+        }
+        return userIdentifier;
     }
 
-    private void validateSignUpRequest(SignUpRequest signUpRequest) throws ParameterValidationFailedException {
-        // Password Validation
-        if (signUpRequest.getPassword() == null || signUpRequest.getPassword().isEmpty()) {
+    // TODO: Pick up Register Process from any step
+    private void validateSignUpRequest(RegisterRequest registerRequest) throws Exception {
+
+        switch (registerRequest.getRegistrationStep()) {
+            case PHONE_REGISTERED: {
+                commonFunctionsUtils.validatePhoneFormat(registerRequest.getPhone());
+
+                if (userRepository.existsByPhoneAndPhoneVerified(registerRequest.getPhone(), true)) {
+                    throw new ParameterValidationFailedException("Phone already exists", ErrorCode.ALREADY_EXISTS);
+                }
+
+                break;
+            }
+
+            case USER_DETAILS_RECEIVED: {
+                if (registerRequest.getUsername() == null || registerRequest.getUsername().isEmpty()) {
+                    throw new ParameterValidationFailedException("Username is required", ErrorCode.EMPTY_FIELD);
+                } else if (userRepository.existsByUsername(registerRequest.getUsername())) {
+                    throw new ParameterValidationFailedException("Username is already taken", ErrorCode.ALREADY_EXISTS);
+                }
+
+                validatePassword(registerRequest.getPassword());
+
+                break;
+            }
+        }
+    }
+
+    // TODO: Password Verification
+    private static void validatePassword(String password) throws Exception {
+        if (password == null || password.isEmpty()) {
             throw new ParameterValidationFailedException("Password is required", ErrorCode.EMPTY_FIELD);
-        }
-
-        // TODO: Email Validation
-        if (signUpRequest.getEmail() == null || signUpRequest.getEmail().isEmpty()) {
-            throw new ParameterValidationFailedException("Email is required", ErrorCode.EMPTY_FIELD);
-        } else if (userRepository.existsByEmail(signUpRequest.getEmail())) {
-            throw new ParameterValidationFailedException("Email already exists", ErrorCode.ALREADY_EXISTS);
-        }
-
-        // Username Validation
-        if (signUpRequest.getUsername() == null || signUpRequest.getUsername().isEmpty()) {
-            throw new ParameterValidationFailedException("Username is required", ErrorCode.EMPTY_FIELD);
-        } else if (userRepository.existsByUsername(signUpRequest.getUsername())) {
-            throw new ParameterValidationFailedException("Username is already taken", ErrorCode.ALREADY_EXISTS);
-        }
-
-        String[] phoneBreak = signUpRequest.getPhone().split("-");
-        if (phoneBreak.length != 2) {
-            throw new ParameterValidationFailedException("Phone number in invalid format", ErrorCode.FIELD_NOT_VALID);
-        }
-        String extension = phoneBreak[0];
-
-        // Extension Validation
-        if (extension == null || extension.isEmpty()) {
-            throw new ParameterValidationFailedException("Extension is required", ErrorCode.EMPTY_FIELD);
-        } else if (!countryRepository.existsByExtension(extension)) {
-            throw new ParameterValidationFailedException("Extension is invalid", ErrorCode.FIELD_NOT_VALID);
-        }
-
-        // TODO: Phone Validation
-        if (userRepository.existsByPhone(signUpRequest.getPhone())) {
-            throw new ParameterValidationFailedException("Phone number already in use", ErrorCode.ALREADY_EXISTS);
         }
     }
 }

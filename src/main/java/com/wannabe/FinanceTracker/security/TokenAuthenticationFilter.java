@@ -36,7 +36,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
     @Autowired
     private CustomUserDetailsService customUserDetailsService;
 
-    private static final List<String> doNotFilterRoutes = new ArrayList<>(List.of("/auth", "/country/fetch-all", "/currency/fetch-all"));
+    private static final List<String> doNotFilterRoutes = new ArrayList<>(List.of("/auth", "/country/fetch-all", "/currency/fetch-all", "/webhook/twilio", "/transaction-method/fetch-all", "/transaction-tag/fetch-all"));
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {

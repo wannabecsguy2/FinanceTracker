@@ -32,4 +32,7 @@ public class CounterParty {
     @JdbcTypeCode(SqlTypes.CHAR)
     @Column(name = "associated_user_id")
     private UUID associatedUserId;
+
+    @Enumerated(EnumType.STRING)
+    private CounterPartyType type;
 }

@@ -81,6 +81,7 @@ public class JWTUtils {
         claims.put("id", userPrincipal.getId());
         claims.put("email", userPrincipal.getEmail());
         claims.put("username", userPrincipal.getUsername());
+        claims.put("roles", userPrincipal.getAuthorities());
 
         return claims;
     }

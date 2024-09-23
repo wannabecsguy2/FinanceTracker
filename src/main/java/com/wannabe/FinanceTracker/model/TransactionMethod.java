@@ -18,4 +18,6 @@ public class TransactionMethod {
     private String code;
 
     private String description;
+
+    private String icon;
 }

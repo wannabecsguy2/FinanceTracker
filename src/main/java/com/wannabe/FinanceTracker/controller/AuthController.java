@@ -6,7 +6,7 @@ import com.wannabe.FinanceTracker.model.ErrorCode;
 import com.wannabe.FinanceTracker.payload.GenericResponseObject;
 import com.wannabe.FinanceTracker.payload.LoginPhoneOTPRequest;
 import com.wannabe.FinanceTracker.payload.LoginPasswordRequest;
-import com.wannabe.FinanceTracker.payload.SignUpRequest;
+import com.wannabe.FinanceTracker.payload.RegisterRequest;
 import com.wannabe.FinanceTracker.service.AuthService;
 
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +22,16 @@ public class AuthController {
     @Autowired
     private AuthService authService;
 
-    @PostMapping("/sign-up")
-    public ResponseEntity<GenericResponseObject<?>> signUp(@RequestBody SignUpRequest signUpRequest) {
+    /* TODO: Refactor Sign Up Process into separate steps
+        1. Sign Up with only Phone number: PHONE_REGISTERED
+        2. Send OTP to phone number and verify: PHONE_VERIFIED
+        3. Get User Details: USER_DETAILS_RECEIVED [First Name, Last Name, Username, Email, Password, D.O.B.]
+    */
+
+    @PostMapping("/register")
+    public ResponseEntity<GenericResponseObject<?>> register(@RequestBody RegisterRequest registerRequest) {
         try {
-            return ResponseEntity.ok().body(authService.signUp(signUpRequest));
+            return ResponseEntity.ok().body(authService.register(registerRequest));
         } catch (ParameterValidationFailedException e) {
             return ResponseEntity.badRequest().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
         } catch (ResourceNotFoundException e) {
@@ -53,7 +59,6 @@ public class AuthController {
 
     // TODO: Forgot Password
 
-    // TODO: OTP login
     @PostMapping("/login-phone-otp")
     public ResponseEntity<GenericResponseObject<?>> loginPhoneOtp(@RequestBody LoginPhoneOTPRequest loginPhoneOTPRequest) {
         try {

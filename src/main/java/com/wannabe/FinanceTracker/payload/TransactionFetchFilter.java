@@ -13,10 +13,11 @@ import java.util.UUID;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class TransactionFetchFilter {
+    private String keyword;
     private List<UUID> createdBy = new ArrayList<>();
     private BigDecimal minAmount = BigDecimal.ZERO;
     private BigDecimal maxAmount = null;
-    private List<UUID> counterPartyIds = new ArrayList<>();
+    private List<UUID> counterPartyIds = new ArrayList<>(); // TODO: Figure how filter spec for updated Schema
     private List<TransactionDirection> directions = new ArrayList<>();
     private List<Long> tagIds = new ArrayList<>();
     private List<Long> methodIds = new ArrayList<>();

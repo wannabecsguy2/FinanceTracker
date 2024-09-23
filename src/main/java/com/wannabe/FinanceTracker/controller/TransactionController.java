@@ -78,14 +78,19 @@ public class TransactionController {
 
     @PreAuthorize("hasRole('USER')")
     @PostMapping("/fetch")
-    public ResponseEntity<GenericResponseObject<?>> fetch(@AuthenticationPrincipal UserPrincipal userPrincipal, @RequestBody TransactionFetchFilter filter, @RequestParam(name="PageNumber") int pageNumber, @RequestParam(name="PageSize") int pageSize) {
+    public ResponseEntity<GenericResponseObject<?>> fetch(@AuthenticationPrincipal UserPrincipal userPrincipal, @RequestBody TransactionFetchFilter filter, @RequestParam(name="PageNumber", required=false) Integer pageNumber, @RequestParam(name="PageSize", required=false) Integer pageSize) {
         try {
+            log.info("Transaction Fetch Filter Request Body {} for userId {}", filter, userPrincipal.getId());
             return ResponseEntity.ok().body(transactionService.fetch(userPrincipal, filter, pageNumber, pageSize));
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
         } catch (Exception e) {
+            log.error("Exception occurred while fetching transaction", e);
             return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Exception occurred while fetching transaction", ErrorCode.SERVICE_FAILED));
         }
     }
+
     // TODO: Add endpoint sends notification (in-app/email) depending on counter party type and option to user
+
+    // TODO: Add endpoint for showing analytics graphs (High Priority)
 }

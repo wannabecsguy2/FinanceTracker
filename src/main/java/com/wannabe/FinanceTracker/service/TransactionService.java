@@ -2,10 +2,7 @@ package com.wannabe.FinanceTracker.service;
 
 import com.wannabe.FinanceTracker.exception.ResourceNotFoundException;
 import com.wannabe.FinanceTracker.model.*;
-import com.wannabe.FinanceTracker.payload.AddTransactionRequest;
-import com.wannabe.FinanceTracker.payload.GenericResponseObject;
-import com.wannabe.FinanceTracker.payload.TransactionFetchFilter;
-import com.wannabe.FinanceTracker.payload.UpdateTransactionRequest;
+import com.wannabe.FinanceTracker.payload.*;
 import com.wannabe.FinanceTracker.repository.*;
 import com.wannabe.FinanceTracker.security.UserPrincipal;
 import com.wannabe.FinanceTracker.specification.TransactionSpecification;
@@ -61,10 +58,11 @@ public class TransactionService {
 
         Transaction newTransaction = new Transaction();
 
-        // Fetch Tag, Method, Currency
+        // Fetch Tag, Method, Currency, CounterParty
         TransactionTag tag = null;
         TransactionMethod method = null;
         Currency currency = null;
+        CounterParty counterParty = null;
 
         if (!counterPartyRepository.existsById(addTransactionRequest.getCounterPartyId())) {
             throw new ResourceNotFoundException("Counter Party not found");
@@ -81,7 +79,11 @@ public class TransactionService {
             currency = currencyRepository.findById(addTransactionRequest.getCurrencyId()).orElseThrow(() -> new ResourceNotFoundException("Specified Currency not found"));
         }
 
-        commonFunctionsUtils.mapTransaction(newTransaction, addTransactionRequest, currency, tag, method);
+        if (addTransactionRequest.getCounterPartyId() != null) {
+            counterParty = counterPartyRepository.findByUserIdAndId(userPrincipal.getId(), addTransactionRequest.getCounterPartyId()).orElseThrow(() -> new ResourceNotFoundException("Specified CounterParty not found"));
+        }
+
+        commonFunctionsUtils.mapTransaction(newTransaction, addTransactionRequest, currency, tag, method, counterParty);
 
         // TODO: Send notification to CounterParty if in internal environment
         try {
@@ -108,6 +110,7 @@ public class TransactionService {
         TransactionTag tag = null;
         TransactionMethod method = null;
         Currency currency = null;
+        CounterParty counterParty = null;
 
         if (!counterPartyRepository.existsById(updateTransactionRequest.getCounterPartyId())) {
             throw new ResourceNotFoundException("Counter Party not found");
@@ -124,7 +127,11 @@ public class TransactionService {
             currency = currencyRepository.findById(updateTransactionRequest.getCurrencyId()).orElseThrow(() -> new ResourceNotFoundException("Specified Currency not found"));
         }
 
-        commonFunctionsUtils.mapTransaction(existingTransaction, updateTransactionRequest, currency, tag, method);
+        if (updateTransactionRequest.getCounterPartyId() != null) {
+            counterParty = counterPartyRepository.findById(updateTransactionRequest.getCounterPartyId()).orElseThrow(() -> new ResourceNotFoundException("Specified CounterParty not found"));
+        }
+
+        commonFunctionsUtils.mapTransaction(existingTransaction, updateTransactionRequest, currency, tag, method, counterParty);
 
         // TODO: Send Update Transaction Notification to CounterParty if in internal environment
         try {
@@ -177,35 +184,41 @@ public class TransactionService {
         }
     }
 
-    public GenericResponseObject<?> fetch(UserPrincipal userPrincipal, TransactionFetchFilter filter, int pageNumber, int pageSize) throws Exception {
+    public GenericResponseObject<?> fetch(UserPrincipal userPrincipal, TransactionFetchFilter filter, Integer pageNumber, Integer pageSize) throws Exception {
         if (!roleAuthorizationUtils.isUserAuthorized(userPrincipal, "ROLE_ADMIN")) {
             filter.setCreatedBy(List.of(userPrincipal.getId()));
         }
 
-        Specification<Transaction> filterSpecification = getFilterSpecification(filter);
         Sort sort = getFilterSort(filter);
         Pageable page = PageRequest.of(pageNumber, pageSize, sort);
 
-        if (filterSpecification == null) {
-            return new GenericResponseObject<>(true, "Returning filtered transactions", transactionRepository.findAll(page));
-        } else {
-            return new GenericResponseObject<>(true, "Returning filtered transactions", transactionRepository.findAll(filterSpecification, page));
+        if (filter.getKeyword() != null && !filter.getKeyword().isEmpty()) {
+            filter.setKeyword(filter.getKeyword().toLowerCase());
+
+            return new GenericResponseObject<>(true, "Returning filtered transactions", transactionRepository.fetchAllByKeyword(filter.getKeyword(), page));
+
+        } else{
+            Specification<Transaction> filterSpecification = getFilterSpecification(filter);
+
+            if (filterSpecification == null) {
+                return new GenericResponseObject<>(true, "Returning filtered transactions", transactionRepository.findAll(page));
+            } else {
+                return new GenericResponseObject<>(true, "Returning filtered transactions", transactionRepository.findAll(filterSpecification, page));
+            }
         }
     }
 
     private Specification<Transaction> getFilterSpecification(TransactionFetchFilter filter) {
         List<Specification<Transaction>> validSpecifications = new ArrayList<>();
-
+        if (!filter.getCounterPartyIds().isEmpty()) {
+            validSpecifications.add(transactionSpecification.hasCounterPartyIdIn(filter.getCounterPartyIds()));
+        }
         if (!filter.getCreatedBy().isEmpty()) {
             validSpecifications.add(transactionSpecification.hasCreatedByIn(filter.getCreatedBy()));
         }
 
         if (filter.getMaxAmount() != null) {
             validSpecifications.add(transactionSpecification.hasAmountBetween(filter.getMinAmount(), filter.getMaxAmount()));
-        }
-
-        if (!filter.getCounterPartyIds().isEmpty()) {
-            validSpecifications.add(transactionSpecification.hasCounterPartyIdIn(filter.getCounterPartyIds()));
         }
 
         if (!filter.getDirections().isEmpty()) {
@@ -232,7 +245,7 @@ public class TransactionService {
 
     private Sort getFilterSort(TransactionFetchFilter filter) {
         if (filter.getSortBy() == null) {
-            return Sort.unsorted();
+            return Sort.by("date").descending();
         }
         return Sort.by(filter.getSortBy());
     }

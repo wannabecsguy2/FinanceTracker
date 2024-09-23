@@ -25,26 +25,30 @@ public class Transaction {
     private UUID createdBy;
 
     @JdbcTypeCode(SqlTypes.CHAR)
-    @Column(name="counter_party_id", nullable = false)
-    private UUID counterPartyId;
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name="counter_party_id", referencedColumnName = "id", nullable = false)
+    private CounterParty counterParty;
 
     @Enumerated(EnumType.STRING)
     private TransactionDirection direction;
 
-    @OneToOne(fetch=FetchType.EAGER, optional=false)
+    @ManyToOne(fetch=FetchType.EAGER, optional=false)
     @JoinColumn(name="tag_id", referencedColumnName="id", nullable=false)
     private TransactionTag tag;
 
-    @OneToOne(fetch=FetchType.EAGER, optional=false)
+    @ManyToOne(fetch=FetchType.EAGER, optional=false)
     @JoinColumn(name="method_id", referencedColumnName="id", nullable=false)
     private TransactionMethod method;
 
     @Column(name="amount", nullable = false)
     private BigDecimal amount;
 
-    @OneToOne(fetch = FetchType.EAGER, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "currency_id", referencedColumnName = "id", nullable = false)
     private Currency currency;
+
+    @Column(name="date", nullable=false)
+    private LocalDateTime date;
 
     private String note;
 

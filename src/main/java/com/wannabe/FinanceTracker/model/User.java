@@ -21,10 +21,10 @@ public class User {
     @Column(name="id", nullable=false, updatable=false, unique=true)
     private UUID id;
 
-    @Column(name="email", nullable=false, unique=true)
+    @Column(name="email", unique=true)
     private String email;
 
-    @Column(name="username", nullable=false, unique=true)
+    @Column(name="username", unique=true)
     private String username;
 
     @Column(name="phone", nullable=false, unique=true)
@@ -43,8 +43,8 @@ public class User {
     @Column(name="phone_verified", nullable=false)
     private boolean phoneVerified = false;
 
-    @OneToOne(fetch=FetchType.EAGER, optional=false, cascade=CascadeType.ALL)
-    @JoinColumn(name="user_profile_id", referencedColumnName="id", nullable=false, updatable=false)
+    @OneToOne(fetch=FetchType.EAGER, cascade=CascadeType.ALL)
+    @JoinColumn(name="user_profile_id", referencedColumnName="id")
     private UserProfile userProfile;
 
     private LocalDateTime created = LocalDateTime.now();
@@ -60,4 +60,8 @@ public class User {
     @OneToOne(fetch=FetchType.EAGER, optional = false)
     @JoinColumn(name="country_id", referencedColumnName="id", nullable = false)
     private Country defaultCountry;
+
+    @Column(name="registration_step", nullable=false)
+    @Enumerated(EnumType.STRING)
+    private RegistrationStep registrationStep = RegistrationStep.PHONE_REGISTERED;
 }

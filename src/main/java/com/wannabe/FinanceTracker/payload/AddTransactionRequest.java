@@ -23,6 +23,7 @@ public class AddTransactionRequest {
     private Long tagId;
     private Long methodId;
     private BigDecimal amount;
+    private LocalDateTime date;
     private Long currencyId;
     private String note;
 }

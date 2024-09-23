@@ -5,6 +5,7 @@ import com.wannabe.FinanceTracker.model.TransactionDirection;
 import lombok.Data;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Data
@@ -16,6 +17,7 @@ public class UpdateTransactionRequest {
     private Long tagId;
     private Long methodId;
     private BigDecimal amount;
+    private LocalDateTime date;
     private Long currencyId;
     private String note;
 }

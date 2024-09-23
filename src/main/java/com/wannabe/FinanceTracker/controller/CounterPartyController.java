@@ -38,6 +38,8 @@ public class CounterPartyController {
     public ResponseEntity<GenericResponseObject<?>> update(@AuthenticationPrincipal UserPrincipal userPrincipal, @RequestBody CounterParty updateCounterPartyPayload) {
         try {
             return ResponseEntity.ok().body(counterPartyService.update(userPrincipal, updateCounterPartyPayload));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
         } catch (Exception e) {
             log.error("Exception occurred while updating counter party", e);
             return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Failed to update counter party", ErrorCode.SERVICE_FAILED));
@@ -58,6 +60,30 @@ public class CounterPartyController {
     }
 
     @PreAuthorize("hasRole('USER')")
+    @GetMapping("/fetch-all")
+    public ResponseEntity<GenericResponseObject<?>> fetchAll(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        try {
+            return ResponseEntity.ok().body(counterPartyService.fetchAll(userPrincipal));
+        } catch (Exception e) {
+            log.error("Exception occurred while fetching all counter parties", e);
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Internal Server Error, please try again later", ErrorCode.SERVICE_FAILED));
+        }
+    }
+
+    @PreAuthorize("hasRole('USER')")
+    @GetMapping("/fetch")
+    public ResponseEntity<GenericResponseObject<?>> fetch(@AuthenticationPrincipal UserPrincipal userPrincipal, @RequestParam("id") UUID id) {
+        try {
+            return ResponseEntity.ok().body(counterPartyService.fetch(userPrincipal, id));
+        } catch (ResourceNotFoundException e) {
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, e.getMessage(), e.getErrorCode()));
+        } catch (Exception e) {
+            log.error("Exception occurred while fetching counter party", e);
+            return ResponseEntity.internalServerError().body(new GenericResponseObject<>(false, "Internal Server Error, please try again later", ErrorCode.SERVICE_FAILED));
+        }
+    }
+
+    @PreAuthorize("hasRole('USER')")
     @GetMapping("/fetch-all-types")
     public ResponseEntity<GenericResponseObject<?>> fetchAllTypes() {
         try {
@@ -69,7 +95,7 @@ public class CounterPartyController {
     }
 
 
-    // TODO: Add endpoints for add, search, delete and update if counter party registers (By email)
+    // TODO: Add endpoints for search and update if counter party registers (By email)
 
     // TODO: Figure out approval for being added as a counter party and approving the specified counter party if it registers on the app. Add requests mode also.
 

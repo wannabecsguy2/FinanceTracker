@@ -33,15 +33,6 @@ public class TransactionSpecification {
         };
     }
 
-    public Specification<Transaction> hasCounterPartyIdIn(List<UUID> counterPartyIds) {
-        return new Specification<Transaction>() {
-            @Override
-            public Predicate toPredicate(Root<Transaction> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
-                return criteriaBuilder.in(root.get("counterPartyId")).value(counterPartyIds);
-            }
-        };
-    }
-
     public Specification<Transaction> hasDirectionIn(List<TransactionDirection> directions) {
         return new Specification<Transaction>() {
             @Override
@@ -77,4 +68,15 @@ public class TransactionSpecification {
             }
         };
     }
+
+    public Specification<Transaction> hasCounterPartyIdIn(List<UUID> counterPartyIds) {
+        return new Specification<Transaction>() {
+            @Override
+            public Predicate toPredicate(Root<Transaction> root, CriteriaQuery<?> query, CriteriaBuilder criteriaBuilder) {
+                return criteriaBuilder.in(root.get("counterParty").get("id")).value(counterPartyIds);
+            }
+        };
+    }
+
+    // TODO: Add specification for keyword search
 }

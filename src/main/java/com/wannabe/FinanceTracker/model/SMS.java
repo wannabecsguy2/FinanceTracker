@@ -23,7 +23,7 @@ public class SMS {
     private UUID userId;
 
     @Enumerated(EnumType.STRING)
-    @Column(name="status", nullable=false, updatable=false)
+    @Column(name="status", nullable=false)
     private SMSStatus status;
 
     @Enumerated(EnumType.STRING)
